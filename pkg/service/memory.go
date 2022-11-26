@@ -7,7 +7,6 @@ import (
 	"green_final1/pkg/model"
 	"math"
 	"sync"
-	"time"
 )
 
 type memoryEnergy struct {
@@ -48,7 +47,7 @@ func (e *memoryEnergy) Collect(userId string, id int64) error {
 			//if "collected_by_other" == cngine.Status {
 			//	return nil
 			//}
-			collectedEnergy := int32(math.Floor(0.4 * float64(cngine.CollectEnergy)))
+			collectedEnergy := int32(math.Floor(0.3 * float64(cngine.CollectEnergy)))
 			tmp := e.UsersSli[user.Idx]
 			tmp.TotalEnergyAtomic.Store(tmp.TotalEnergyAtomic.Add(collectedEnergy))
 			//user.TotalEnergy += collectedEnergy
@@ -59,7 +58,7 @@ func (e *memoryEnergy) Collect(userId string, id int64) error {
 
 	if e.cnt.Load() == 100_0000 {
 		e.e.BulkUpdateTotal(e.Users)
-		time.Sleep(5 * time.Second)
+		//time.Sleep(5 * time.Second)
 	}
 
 	return nil
@@ -79,8 +78,9 @@ func NewMemoryService() Collector {
 	if err != nil {
 		fmt.Printf("query toCollectEnergy err is %v", err)
 	}
-	tx1.Commit()
 	defer toCollectEnergy.Close()
+	tx1.Commit()
+
 	tx2 := db.Begin()
 	totalEnergy, err := tx2.Query("select id, user_id, total_energy from total_energy")
 	if err != nil {
@@ -106,12 +106,12 @@ func NewMemoryService() Collector {
 	for totalEnergy.Next() {
 		totalEnergy.Scan(&tid, &uid, &tEnergy)
 		service.Users[uid] = &model.TotalEnergy{
-			Idx:         tid,
-			UserId:      uid,
-			TotalEnergy: tEnergy,
+			Idx:    tid % 100000,
+			UserId: uid,
+			//TotalEnergy: tEnergy,
 		}
 		service.UsersSli[tid] = &model.TotalEnergy{
-			Idx:               tid,
+			Idx:               tid % 100000,
 			UserId:            uid,
 			TotalEnergyAtomic: atomic.NewInt32(int32(tEnergy)),
 		}

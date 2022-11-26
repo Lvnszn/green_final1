@@ -10,7 +10,7 @@ import (
 
 func init() {
 	//c = service.NewService()
-	c = service.NewMemoryService()
+	//c = service.NewMemoryService()
 }
 
 var c service.Collector

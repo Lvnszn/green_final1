@@ -41,7 +41,7 @@ type mysqlEngine struct {
 
 func (m *mysqlEngine) BulkUpdateTotal(unsavedRows map[string]*model.TotalEnergy) error {
 	for _, post := range unsavedRows {
-		m.Db.Exec("update total_energy set total_energy = ? where user_id = ?", post.TotalEnergy, post.UserId)
+		m.Db.Exec("update total_energy set total_energy = ? where user_id = ?", post.TotalEnergyAtomic.Load(), post.UserId)
 	}
 	return nil
 }
@@ -59,17 +59,18 @@ func (m *mysqlEngine) Begin() *sql.Tx {
 }
 
 func (m *mysqlEngine) BulkInsertTotal(unsavedRows map[string]*model.TotalEnergy) error {
-	valueStrings := make([]string, 0, len(unsavedRows))
-	valueArgs := make([]interface{}, 0, len(unsavedRows)*3)
-	for _, post := range unsavedRows {
-		valueStrings = append(valueStrings, "(?, ?)")
-		valueArgs = append(valueArgs, post.UserId)
-		valueArgs = append(valueArgs, post.TotalEnergy)
-	}
-	stmt := fmt.Sprintf("INSERT INTO total_energy (user_id, total_energy) VALUES %s",
-		strings.Join(valueStrings, ","))
-	_, err := m.Db.Exec(stmt, valueArgs...)
-	return err
+	//valueStrings := make([]string, 0, len(unsavedRows))
+	//valueArgs := make([]interface{}, 0, len(unsavedRows)*3)
+	//for _, post := range unsavedRows {
+	//	valueStrings = append(valueStrings, "(?, ?)")
+	//	valueArgs = append(valueArgs, post.UserId)
+	//	//valueArgs = append(valueArgs, post.TotalEnergy)
+	//}
+	//stmt := fmt.Sprintf("INSERT INTO total_energy (user_id, total_energy) VALUES %s",
+	//	strings.Join(valueStrings, ","))
+	//_, err := m.Db.Exec(stmt, valueArgs...)
+	//return err
+	return nil
 }
 
 func (m *mysqlEngine) BulkInsertCollect(unsavedRows map[int64]*model.ToCollectEnergy) error {

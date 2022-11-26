@@ -39,5 +39,9 @@ create table to_collect_energy
 原生 net/http 性能 13.8 分左右。
 
 空跑 fasthttp 最好是 22s, 大概 39.41 分
+
+空跑 gnet 最好是 25s，大概 39.33
+
+
 delete + insert 方案 99.39 分（被否定了）
 
