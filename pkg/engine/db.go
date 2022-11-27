@@ -1,14 +1,14 @@
 package engine
 
 import (
-	"context"
+	"bytes"
 	"database/sql"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	_const "green_final1/pkg/const"
 	"green_final1/pkg/model"
+	"strconv"
 	"strings"
-	"time"
 )
 
 type CommonEngine interface {
@@ -43,13 +43,31 @@ func (m *mysqlEngine) BulkUpdateTotal(unsavedRows map[string]*model.TotalEnergy)
 	for _, post := range unsavedRows {
 		m.Db.Exec("update total_energy set total_energy = ? where user_id = ?", post.TotalEnergyAtomic.Load(), post.UserId)
 	}
+
 	return nil
 }
 
 func (m *mysqlEngine) BulkUpdateTotalSlice(unsavedRows []*model.TotalEnergy) error {
-	for _, post := range unsavedRows {
-		m.Db.Exec("update total_energy set total_energy = ? where user_id = ?", post.TotalEnergyAtomic.Load(), post.UserId)
+	energies := map[int][]string{}
+	for _, te := range unsavedRows {
+		if te != nil {
+			total := te.TotalEnergy
+			energies[total] = append(energies[total], te.UserId)
+		}
 	}
+	sqlBuffer := bytes.Buffer{}
+	for total, userIds := range energies {
+		sqlBuffer.WriteString("update `total_energy` set `total_energy` = " + strconv.Itoa(total) + " where user_id in (")
+		for _, userId := range userIds {
+			sqlBuffer.WriteString("'" + userId + "',")
+		}
+		sqlBuffer.Truncate(sqlBuffer.Len() - 1)
+		sqlBuffer.WriteString(");")
+	}
+	m.Db.Exec(sqlBuffer.String())
+	//for _, post := range unsavedRows {
+	//	m.Db.Exec("update total_energy set total_energy = ? where user_id = ?", post.TotalEnergyAtomic.Load(), post.UserId)
+	//}
 	return nil
 }
 
@@ -90,10 +108,13 @@ func (m *mysqlEngine) BulkInsertCollect(unsavedRows map[int64]*model.ToCollectEn
 }
 
 func (m *mysqlEngine) Update(sql string, args ...any) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	tx, _ := m.Db.BeginTx(ctx, nil)
-	_, err := tx.Exec(sql, args...)
-	cancel()
+	//ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	//tx, _ := m.Db.BeginTx(ctx, nil)
+	_, err := m.Db.Exec(sql, args...)
+	if err != nil {
+		fmt.Printf("exec err %v\n", err)
+	}
+	//cancel()
 	return err
 }
 
