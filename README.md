@@ -1,3 +1,8 @@
+# 比赛地址
+https://www.atecup.cn/greenComputingHome
+
+# 成绩：赛道一，决赛第二名
+
 # 数据准备
 
 通过 docker 下载数据库，并且运行起来
