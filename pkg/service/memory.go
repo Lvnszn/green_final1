@@ -13,11 +13,10 @@ import (
 )
 
 type memoryEnergy struct {
-	e         engine.CommonEngine
-	UsersSli  []*model.TotalEnergy
-	Collected []*model.ToCollectEnergy
-	Users     map[string]*model.TotalEnergy
-	//CollectEnergy map[int64]*model.ToCollectEnergy
+	e             engine.CommonEngine
+	UsersSli      []*model.TotalEnergy
+	Collected     []*model.ToCollectEnergy
+	Users         map[string]*model.TotalEnergy
 	lock          sync.RWMutex
 	acnt          int
 	cnt, aId, cId atomic.Int32
@@ -26,15 +25,10 @@ type memoryEnergy struct {
 func (e *memoryEnergy) Collect(userId string, id int64) error {
 	e.lock.Lock()
 	defer e.lock.Unlock()
-	//e.cnt.CompareAndSwap(-1, e.cnt.Inc())
-	//cnt := e.cnt.Load()
 	e.acnt++
 	if e.acnt%20000 == 0 {
 		fmt.Printf(time.Now().Format("2006-01-02 15:04:05")+" "+"handle request count: %d, userId: %v, id %v\n", e.acnt, userId, id)
 	}
-	//if e.cnt > 100_0000-10_00 {
-	//	time.Sleep(1 * time.Second)
-	//}
 	if id < 1 {
 		return nil
 	}
@@ -45,36 +39,22 @@ func (e *memoryEnergy) Collect(userId string, id int64) error {
 			return nil
 		}
 		if cngine.UserId == userId {
-			//user.TotalEnergy += cngine.CollectEnergy
-			//tmp := e.UsersSli[user.Idx]
-			//tmp.TotalEnergyAtomic
 			e.UsersSli[user.Idx].TotalEnergy += cngine.CollectEnergy
-			//tmp.TotalEnergyAtomic.CompareAndSwap(0, tmp.TotalEnergyAtomic.Add(int32(cngine.CollectEnergy)))
-			//tmp.TotalEnergyAtomic.CompareAndSwap(-1, tmp.TotalEnergyAtomic.Add(int32(cngine.CollectEnergy)))
-			//user.TotalEnergy = 666
-			//cngine.Status = "all_collected"
-			//cngine.CollectEnergy = 0
 			e.Collected[id].Status = "all_collected"
 		} else {
 			if "collected_by_other" == cngine.Status {
 				return nil
 			}
 			collectedEnergy := int(math.Floor(0.3 * float64(cngine.CollectEnergy)))
-			//tmp := e.UsersSli[user.Idx]
-			//tmp.TotalEnergyAtomic.CompareAndSwap(-1, tmp.TotalEnergyAtomic.Add(collectedEnergy))
 			e.UsersSli[user.Idx].TotalEnergy += collectedEnergy
-			//cngine.CollectEnergy -= collectedEnergy
-			//cngine.Status = "collected_by_other"
 			e.Collected[id].Status = "collected_by_other"
 		}
 	}
 
 	if e.acnt == 100_0000 {
-		//go func() {
-		//}()
 		updateZeroBuffer := bytes.Buffer{}
 		//updateSevenBuffer := bytes.Buffer{}
-		//zIds := make([]int64, 0, 500000)
+		zIds := make([]int64, 0, 500000)
 		//sIds := make([]int64, 0, 500000)
 		updateZeroBuffer.WriteString("update to_collect_energy set to_collect_energy = 0 where id in (")
 		//updateSevenBuffer.WriteString("update to_collect_energy set to_collect_energy = ceil(to_collect_energy*0.7) where id in (")
@@ -87,7 +67,7 @@ func (e *memoryEnergy) Collect(userId string, id int64) error {
 				//sIds = append(sIds, v.ID)
 			} else if v.Status == "all_collected" {
 				updateZeroBuffer.WriteString("" + strconv.FormatInt(v.ID, 10) + ",")
-				//zIds = append(zIds, v.ID)
+				zIds = append(zIds, v.ID)
 			} else {
 				e.e.Update("update to_collect_energy set to_collect_energy = ? where id = ?", v.CollectEnergy, v.ID)
 			}
@@ -98,10 +78,10 @@ func (e *memoryEnergy) Collect(userId string, id int64) error {
 
 		//updateSevenBuffer.Truncate(updateSevenBuffer.Len() - 1)
 		//updateSevenBuffer.WriteString(");")
-		go func() {
-			fmt.Printf(time.Now().Format("2006-01-02 15:04:05")+" "+"updateZeroBuffer.String(): %v \n", updateZeroBuffer.String())
-			e.e.Update(updateZeroBuffer.String())
-		}()
+		//go func() {
+		//	fmt.Printf(time.Now().Format("2006-01-02 15:04:05")+" "+"updateZeroBuffer.String(): %v \n", updateZeroBuffer.String())
+		//	e.e.Update(updateZeroBuffer.String())
+		//}()
 		e.e.BulkUpdateTotalSlice(e.UsersSli)
 
 		//go func() {
@@ -109,7 +89,6 @@ func (e *memoryEnergy) Collect(userId string, id int64) error {
 		//	fmt.Printf(time.Now().Format("2006-01-02 15:04:05")+" "+"updateSevenBuffer.String(): %d \n", updateSevenBuffer.String())
 		//	e.e.Update(updateSevenBuffer.String())
 		//}()
-		//time.Sleep(5 * time.Second)
 	}
 
 	return nil
@@ -119,7 +98,7 @@ func NewMemoryService() Collector {
 	db := engine.NewMdb()
 	service := &memoryEnergy{
 		e:        db,
-		UsersSli: make([]*model.TotalEnergy, 100000),
+		UsersSli: make([]*model.TotalEnergy, 100001),
 		Users:    make(map[string]*model.TotalEnergy, 100000),
 		//CollectEnergy: make(map[int64]*model.ToCollectEnergy, 1000000),
 		Collected: make([]*model.ToCollectEnergy, 1000001),
@@ -172,8 +151,5 @@ func NewMemoryService() Collector {
 	}
 
 	service.e.Update("update to_collect_energy set to_collect_energy = ceil(to_collect_energy*0.7)")
-
-	//db.DeleteAll("to_collect_energy")
-	//db.DeleteAll("total_energy")
 	return service
 }

@@ -1,7 +1,7 @@
 .phony: build docker zip
 build:
 	rm -rf server
-	GOOS=linux GOARCH=amd64 /usr/local/Cellar/go/1.18.2/libexec/bin/go build -o server
+	GOOS=linux GOARCH=amd64 /usr/local/Cellar/go/1.19.3/libexec/bin/go build -o server
 
 docker:
 	docker build -t green3 .
